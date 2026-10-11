@@ -117,7 +117,7 @@ def ask_ai(history, prompt):
     if not key:
         return None, "GEMINI_API_KEY belum diatur di Streamlit Cloud → Settings → Secrets."
     # Model default dapat diganti lewat Secrets; tidak memakai Gemini 2.5 Flash.
-    model = secret("GEMINI_MODEL", "gemini-3.8-flash").strip().removeprefix("models/")
+    model = secret("GEMINI_MODEL", "gemini-3.5-flash-lite").strip().removeprefix("models/")
     system = ("Kamu adalah Ruang AI, pendamping belajar Bahasa Indonesia untuk siswa SMA. "
               "Bantu siswa memahami teks Laporan Hasil Observasi (LHO) dengan bahasa ramah dan jelas. "
               "Berikan contoh orisinal, dorong siswa berpikir, dan jangan mengarang sumber.")
