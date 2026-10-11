@@ -1,286 +1,333 @@
-import streamlit as st
-import sqlite3, os, json
+import os, sqlite3, uuid
 from pathlib import Path
 from datetime import datetime
+import requests
+import streamlit as st
 
-APP_DIR = Path(__file__).parent
-DATA_DIR = APP_DIR / "data"
-UPLOAD_DIR = DATA_DIR / "tugas_siswa"
-DATA_DIR.mkdir(exist_ok=True)
-UPLOAD_DIR.mkdir(exist_ok=True)
-DB_PATH = DATA_DIR / "ruanglho.db"
+st.set_page_config(page_title="Ruang LHO", page_icon="📘", layout="wide")
 
-st.set_page_config(page_title="Ruang LHO | Bahasa Indonesia X", page_icon="📘", layout="wide")
-st.markdown("""
-<style>
-.block-container{padding-top:1.6rem;max-width:1200px}
-.hero{background:linear-gradient(120deg,#172b4d,#315efb);padding:2rem 2.2rem;border-radius:20px;color:white;margin-bottom:1.2rem}
-.hero h1{color:white;font-size:2.35rem;margin-bottom:.4rem}.hero p{color:#e0e8ff;font-size:1.05rem}
-div[data-testid="stMetric"]{background:#f4f7ff;border:1px solid #e1e8ff;padding:14px;border-radius:14px}
-</style>
-""", unsafe_allow_html=True)
+SCHOOL = "SMA PAB 4 Sampali"
+YEAR = "2026/2027"
+AUTHORS = [
+    "Atika Sania Samni Nst", "Wilda Lestari Harahap",
+    "Siti Fadillah Hasibuan", "Dea Saputri", "Lawri Aulia Hasibuan",
+    "Mela E. Ambarita", "Wanti Br Hombing"
+]
+TOPICS = [
+    "Pengertian Teks Laporan Hasil Observasi",
+    "Tujuan Teks Laporan Hasil Observasi",
+    "Ciri-ciri Teks Laporan Hasil Observasi",
+    "Struktur Teks Laporan Hasil Observasi",
+    "Kaidah Kebahasaan Teks Laporan Hasil Observasi",
+    "Contoh Teks Laporan Hasil Observasi",
+    "Langkah-langkah Menyusun Teks Laporan Hasil Observasi",
+    "Penyajian dan Presentasi Hasil Observasi",
+]
+VIDEO_URL = "https://www.youtube.com/results?search_query=teks+laporan+hasil+observasi+kelas+X+struktur+kaidah+kebahasaan"
 
+MATERIALS = {
+TOPICS[0]: """Teks Laporan Hasil Observasi (LHO) menyampaikan informasi tentang suatu objek berdasarkan pengamatan yang sistematis. Objek dapat berupa makhluk hidup, benda, tempat, lingkungan, atau fenomena. Informasinya harus berdasarkan fakta, bukan imajinasi atau pendapat pribadi.""",
+TOPICS[1]: """Tujuan teks LHO adalah memberikan informasi faktual dan objektif tentang objek atau fenomena. Laporan membantu pembaca mengenali, memahami, dan mengelompokkan objek berdasarkan ciri-cirinya. Kegiatan ini juga melatih keterampilan mengamati, mencatat data, dan menyampaikan temuan dengan jelas.""",
+TOPICS[2]: """Ciri-ciri teks LHO: (1) berdasarkan fakta/data pengamatan; (2) objektif; (3) membahas objek secara umum lalu bagian-bagiannya; (4) sistematis dan runtut; (5) menggunakan bahasa baku dan informatif; (6) dapat mengelompokkan objek berdasarkan ciri-cirinya.""",
+TOPICS[3]: """Struktur umum teks LHO:
+1. Pernyataan umum/klasifikasi: mengenalkan objek dan menjelaskan definisi atau kelompoknya.
+2. Deskripsi bagian: merinci ciri, bagian, sifat, perilaku, atau kondisi objek berdasarkan pengamatan.
+3. Deskripsi manfaat atau simpulan (bila diperlukan): menjelaskan manfaat atau merangkum temuan utama.
+Sesuaikan istilah struktur dengan buku ajar dan arahan guru yang digunakan di sekolah.""",
+TOPICS[4]: """Kaidah kebahasaan yang sering digunakan: kata benda (tanaman, perpustakaan); kata kerja relasional (adalah, merupakan, termasuk); kata kerja material (tumbuh, bergerak, menghasilkan); istilah teknis; kalimat definisi dan deskripsi; serta kata sifat yang dapat dibuktikan melalui pengamatan. Hindari klaim berlebihan tanpa data.""",
+TOPICS[5]: """Contoh singkat: Tanaman Lidah Buaya
 
-def connect():
-    con = sqlite3.connect(DB_PATH, check_same_thread=False)
-    con.row_factory = sqlite3.Row
-    return con
+Pernyataan umum: Lidah buaya merupakan tanaman sukulen yang dapat menyimpan air pada daunnya dan dapat ditanam di pekarangan.
 
+Deskripsi bagian: Daunnya tebal, memanjang, berwarna hijau, dan memiliki tepi bergerigi. Bagian dalam daun mengandung gel. Tanaman membutuhkan cahaya matahari dan air untuk tumbuh.
+
+Deskripsi manfaat: Lidah buaya dimanfaatkan dalam produk perawatan dan sebagai tanaman hias. Untuk tugas sendiri, gunakan fakta dari pengamatan nyata.""",
+TOPICS[6]: """Langkah menyusun teks LHO: 1) menentukan objek yang aman untuk diamati; 2) menentukan tujuan dan aspek pengamatan; 3) mengamati dengan teliti; 4) mencatat fakta; 5) mengelompokkan data; 6) membuat kerangka; 7) mengembangkan kerangka menjadi paragraf; 8) memeriksa fakta, ejaan, tanda baca, dan pilihan kata; 9) merevisi berdasarkan masukan.""",
+TOPICS[7]: """Hasil observasi dapat disajikan sebagai laporan tertulis, poster, infografik, atau presentasi lisan. Saat presentasi, sampaikan objek dan tujuan, cara pengamatan, temuan utama, lalu simpulan. Gunakan foto, tabel, atau diagram bila membantu. Jawab pertanyaan berdasarkan data dan bedakan fakta dari dugaan."""
+}
+CP_TEXT = ("Ringkasan kerja: peserta didik memahami, mengolah, dan menyampaikan informasi dari berbagai jenis teks; "
+           "menggunakan Bahasa Indonesia secara logis, kritis, dan kreatif; serta menyajikan gagasan dan hasil pengamatan "
+           "secara runtut sesuai konteks. Ini bukan kutipan verbatim CP resmi—guru perlu mencocokkannya dengan dokumen CP "
+           "Bahasa Indonesia Fase E yang berlaku.")
+ATP = [
+"Menjelaskan pengertian dan tujuan teks LHO berdasarkan contoh.",
+"Mengidentifikasi ciri-ciri dan struktur teks LHO.",
+"Menganalisis kaidah kebahasaan teks LHO.",
+"Menemukan informasi faktual dalam contoh teks LHO.",
+"Menyusun teks LHO berdasarkan hasil pengamatan nyata.",
+"Menyunting teks berdasarkan struktur, fakta, dan kaidah bahasa.",
+"Menyajikan hasil observasi secara lisan atau visual dengan runtut."
+]
+
+ROOT = Path(__file__).parent
+DATA = ROOT / "data"
+UPLOADS = DATA / "tugas"
+DATA.mkdir(exist_ok=True)
+UPLOADS.mkdir(exist_ok=True)
+DB = DATA / "ruang_lho.db"
+
+def secret(name, default=""):
+    try:
+        return str(st.secrets.get(name, default))
+    except Exception:
+        return os.getenv(name, default)
+
+def db():
+    c = sqlite3.connect(DB, check_same_thread=False)
+    c.row_factory = sqlite3.Row
+    return c
 
 def init_db():
-    with connect() as con:
-        con.execute('''CREATE TABLE IF NOT EXISTS submissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, student_name TEXT NOT NULL,
-            class_name TEXT NOT NULL, task_title TEXT NOT NULL, note TEXT,
-            file_name TEXT NOT NULL, saved_path TEXT NOT NULL, submitted_at TEXT NOT NULL,
-            score INTEGER, feedback TEXT, reviewed_at TEXT)''')
+    with db() as c:
+        c.execute("""CREATE TABLE IF NOT EXISTS tasks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, class_name TEXT DEFAULT '',
+        title TEXT NOT NULL, answer TEXT DEFAULT '', file_name TEXT DEFAULT '', stored_file TEXT DEFAULT '',
+        submitted TEXT NOT NULL, feedback TEXT DEFAULT '', score TEXT DEFAULT '', reviewed TEXT DEFAULT '')""")
+        c.execute("""CREATE TABLE IF NOT EXISTS quizzes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, score INTEGER, total INTEGER, submitted TEXT)""")
+        c.commit()
 init_db()
 
-st.sidebar.title("📘 Ruang LHO")
-st.sidebar.caption("Bahasa Indonesia • Kelas X")
-page = st.sidebar.radio("Menu", ["Beranda", "Komponen Inti (Identitas Modul)", "Materi LHO", "LKPD", "Kuis", "Kumpulkan Tugas", "Ruang Guru", "Tanya AI"])
-st.sidebar.divider()
-st.sidebar.info("Versi aplikasi lokal. Data tugas tersimpan di folder aplikasi pada laptop yang menjalankannya.")
+def task_rows(name=None):
+    with db() as c:
+        if name:
+            return c.execute("SELECT * FROM tasks WHERE lower(name)=lower(?) ORDER BY id DESC",(name.strip(),)).fetchall()
+        return c.execute("SELECT * FROM tasks ORDER BY id DESC").fetchall()
 
-if page == "Beranda":
-    st.markdown("<div class='hero'><h1>Selamat Datang di Ruang LHO</h1><p>Ruang belajar Bahasa Indonesia kelas X untuk memahami, menganalisis, dan menyusun teks Laporan Hasil Observasi.</p></div>", unsafe_allow_html=True)
-    a,b,c = st.columns(3)
-    a.metric("Topik utama", "Teks LHO")
-    b.metric("Fitur belajar", "Materi & Kuis")
-    c.metric("Tugas", "Unggah & Umpan Balik")
-    st.subheader("Mulai belajar")
-    cols = st.columns(3)
-    with cols[0]:
-        st.markdown("### 📖 Materi")
-        st.write("Pelajari pengertian, tujuan, ciri, struktur, kaidah kebahasaan, dan langkah menyusun teks LHO.")
-    with cols[1]:
-        st.markdown("### ✍️ Kuis")
-        st.write("Uji pemahamanmu melalui pertanyaan pilihan ganda dan lihat skor secara langsung.")
-    with cols[2]:
-        st.markdown("### 📤 Tugas")
-        st.write("Kirim hasil tugas untuk diperiksa guru. Guru dapat memberi nilai dan umpan balik di menu Ruang Guru.")
-    st.info("Siswa dan guru dapat menggunakan menu yang sesuai. Untuk berbagi lewat internet, aplikasi harus dipublikasikan ke hosting; petunjuknya ada di file MULAI_DI_SINI.txt.")
+def submit_task(name, klass, title, answer, upload):
+    fname, stored = "", ""
+    if upload:
+        fname = Path(upload.name).name
+        stored = uuid.uuid4().hex + "_" + fname.replace(" ", "_")
+        (UPLOADS / stored).write_bytes(upload.getbuffer())
+    with db() as c:
+        c.execute("""INSERT INTO tasks(name,class_name,title,answer,file_name,stored_file,submitted)
+        VALUES(?,?,?,?,?,?,?)""",(name.strip(),klass.strip(),title,answer.strip(),fname,stored,datetime.now().strftime("%Y-%m-%d %H:%M")))
+        c.commit()
 
-elif page == "Komponen Inti (Identitas Modul)":
-    st.title("Komponen Inti — Identitas Modul")
-    st.caption("Modul Ajar Bahasa Indonesia • Fase E / Kelas X")
-    st.subheader("A. Identitas Modul")
-    st.markdown("""
-    | Komponen | Keterangan |
-    |---|---|
-    | Satuan pendidikan | SMA/MA (sesuaikan dengan satuan pendidikan pengguna) |
-    | Mata pelajaran | Bahasa Indonesia |
-    | Fase/Kelas | Fase E / Kelas X |
-    | Materi pokok | Teks Laporan Hasil Observasi (LHO) |
-    | Alokasi waktu | 2 pertemuan (dapat disesuaikan dengan jadwal sekolah) |
-    | Penyusun | Guru mata pelajaran (isi nama guru) |
-    | Tahun pelajaran | Sesuaikan dengan tahun pelajaran yang berlaku |
-    """)
-    st.subheader("B. Kompetensi Awal")
-    st.write("Peserta didik telah memiliki pengalaman membaca teks informatif dan mampu mengidentifikasi informasi tersurat dalam bacaan sederhana.")
-    st.subheader("C. Profil Pelajar Pancasila")
-    st.write("Bernalar kritis, mandiri, dan gotong royong melalui kegiatan mengamati objek, memeriksa fakta, berdiskusi, dan menyusun laporan.")
-    st.subheader("D. Sarana dan Prasarana")
-    st.write("Buku teks, perangkat untuk mengakses Ruang LHO, koneksi internet bila tersedia, objek observasi, dan lembar kerja peserta didik (LKPD).")
-    st.subheader("E. Target Peserta Didik")
-    st.write("Peserta didik kelas X dengan kebutuhan belajar yang beragam; guru dapat memberikan pendampingan atau pengayaan sesuai hasil asesmen awal.")
-    st.subheader("F. Model/Metode Pembelajaran")
-    st.write("Pembelajaran berbasis pengamatan dan diskusi, tanya jawab, latihan menganalisis struktur, serta praktik menyusun teks LHO.")
-    st.subheader("G. Tujuan Pembelajaran")
-    st.markdown("""Setelah pembelajaran, peserta didik mampu:
-1. Menjelaskan pengertian, tujuan, dan ciri teks LHO.
-2. Mengidentifikasi struktur dan kaidah kebahasaan teks LHO.
-3. Membedakan informasi faktual dan opini.
-4. Menyusun kerangka dan teks LHO berdasarkan hasil pengamatan secara sistematis.""")
-    st.subheader("H. Pemahaman Bermakna")
-    st.write("Observasi yang cermat membantu kita menyampaikan informasi faktual tentang objek secara jelas, teratur, dan dapat dipertanggungjawabkan.")
-    st.subheader("I. Pertanyaan Pemantik")
-    st.markdown("""- Mengapa laporan hasil pengamatan perlu berdasarkan fakta?
-- Bagaimana cara membedakan deskripsi objektif dan pendapat pribadi?
-- Informasi apa yang perlu dicatat ketika mengamati suatu objek?""")
-    st.subheader("J. Asesmen")
-    st.write("Asesmen diagnostik melalui tanya jawab, asesmen formatif melalui kuis dan LKPD, serta asesmen produk melalui teks LHO yang dikumpulkan peserta didik.")
+def save_review(task_id, score, feedback):
+    with db() as c:
+        c.execute("UPDATE tasks SET score=?,feedback=?,reviewed=? WHERE id=?",
+                  (score.strip(),feedback.strip(),datetime.now().strftime("%Y-%m-%d %H:%M"),task_id))
+        c.commit()
 
-elif page == "Materi LHO":
-    st.title("Materi Pembelajaran: Teks Laporan Hasil Observasi")
-    st.write("Teks laporan hasil observasi (LHO) adalah teks yang menyampaikan informasi tentang suatu objek berdasarkan hasil pengamatan secara sistematis. Objek dapat berupa hewan, tumbuhan, lingkungan, benda, atau fenomena sosial.")
-    with st.expander("1. Tujuan dan fungsi teks LHO", expanded=True):
-        st.write("Teks LHO bertujuan menyajikan informasi faktual agar pembaca memahami objek yang diamati. Laporan yang baik menyampaikan hasil pengamatan secara jelas, objektif, dan teratur, bukan berdasarkan dugaan atau pendapat pribadi semata.")
-    with st.expander("2. Ciri-ciri teks LHO"):
-        st.markdown("- Berdasarkan fakta hasil observasi.\n- Membahas objek secara umum sebelum rincian bagian.\n- Disusun secara sistematis dan logis.\n- Menggunakan bahasa baku dan istilah yang sesuai.\n- Informasi dapat diperiksa atau dibuktikan.")
-    with st.expander("3. Struktur teks LHO"):
-        st.markdown("**Pernyataan umum/klasifikasi:** pengenalan objek dan pengelompokan secara umum.\n\n**Deskripsi bagian:** penjelasan ciri, bagian, sifat, perilaku, atau kondisi objek secara lebih rinci.\n\n**Deskripsi manfaat/simpulan:** informasi tentang fungsi atau manfaat objek, jika relevan dengan objek dan tujuan laporan.")
-    with st.expander("4. Kaidah kebahasaan"):
-        st.markdown("- **Nomina:** kata benda, misalnya tumbuhan, habitat, ekosistem.\n- **Verba relasional:** kata penghubung definisi/klasifikasi, misalnya adalah, merupakan, termasuk.\n- **Verba material:** kata kerja tindakan, misalnya tumbuh, menghasilkan, bergerak.\n- **Istilah teknis:** kosakata khusus sesuai bidang yang diamati.\n- **Kalimat definisi dan deskripsi:** kalimat yang menjelaskan pengertian atau ciri objek.\n- **Kata baku:** gunakan bentuk kata sesuai kaidah bahasa Indonesia.")
-    with st.expander("5. Langkah menyusun teks LHO"):
-        st.markdown("1. Tentukan objek yang akan diamati.\n2. Tentukan tujuan dan aspek pengamatan.\n3. Lakukan pengamatan langsung atau gunakan sumber tepercaya.\n4. Catat data faktual dengan rinci.\n5. Kelompokkan data berdasarkan aspek yang sama.\n6. Susun kerangka sesuai struktur teks LHO.\n7. Kembangkan kerangka menjadi paragraf yang padu.\n8. Periksa kembali fakta, struktur, ejaan, dan pilihan kata.")
-    with st.expander("6. Contoh teks LHO: Tanaman lidah buaya"):
-        st.markdown("**Pernyataan umum**\n\nLidah buaya merupakan tanaman sukulen yang mampu menyimpan air pada daunnya. Tanaman ini banyak tumbuh di daerah beriklim hangat dan dapat dibudidayakan di pekarangan maupun pot.\n\n**Deskripsi bagian**\n\nDaun lidah buaya berbentuk memanjang, tebal, dan memiliki tepi bergerigi. Bagian dalam daunnya mengandung gel bening. Akarnya relatif dangkal, sedangkan daunnya tumbuh berkelompok dari pangkal tanaman.\n\n**Deskripsi manfaat**\n\nLidah buaya dimanfaatkan sebagai tanaman hias dan bahan dalam sejumlah produk perawatan tubuh. Pemanfaatannya perlu memperhatikan jenis produk dan cara pengolahan yang aman.")
-    with st.expander("7. Cara membedakan fakta dan opini"):
-        st.write("Fakta merupakan informasi yang dapat diperiksa kebenarannya melalui pengamatan atau sumber tepercaya. Opini merupakan pendapat atau penilaian seseorang. Dalam teks LHO, utamakan fakta yang relevan dan hindari penilaian subjektif seperti 'tanaman ini paling cantik' jika tidak disertai kriteria yang jelas.")
-
-elif page == "LKPD":
-    st.title("Lembar Kerja Peserta Didik (LKPD) — Teks LHO")
-    st.write("LKPD tersedia di menu tersendiri agar siswa mudah menemukan dan mengunduhnya.")
-    st.subheader("Petunjuk pengerjaan")
-    st.markdown("""1. Unduh LKPD Word di bawah.
-2. Baca petunjuk pada setiap bagian.
-3. Amati objek yang ditentukan guru atau pilih objek di lingkungan sekitar.
-4. Catat fakta hasil pengamatan.
-5. Lengkapi analisis struktur dan kaidah kebahasaan, lalu susun teks LHO.
-6. Simpan hasil kerja, kemudian unggah melalui menu **Kumpulkan Tugas**.""")
-    lkpd_path = APP_DIR / "LKPD_LHO_Kelas_X.docx"
-    if lkpd_path.exists():
-        st.download_button("📄 Unduh LKPD Teks LHO (Word)", data=lkpd_path.read_bytes(), file_name="LKPD_LHO_Kelas_X.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", type="primary")
-    else:
-        st.error("File LKPD tidak ditemukan. Pastikan LKPD_LHO_Kelas_X.docx berada satu folder dengan app.py.")
-    st.info("Setelah selesai, unggah file LKPD melalui menu Kumpulkan Tugas. Guru dapat memberikan nilai dan umpan balik melalui menu Ruang Guru.")
-
-elif page == "Kuis":
-    st.title("Kuis Pemahaman Teks LHO")
-    questions = [
-        ("Teks LHO disusun terutama berdasarkan …", ["imajinasi penulis", "fakta hasil pengamatan", "perasaan pembaca", "dialog tokoh"], 1, "Teks LHO menyajikan fakta yang diperoleh dari observasi."),
-        ("Bagian yang berisi pengenalan atau klasifikasi umum objek disebut …", ["deskripsi bagian", "orientasi", "pernyataan umum", "resolusi"], 2, "Pernyataan umum mengenalkan dan mengklasifikasikan objek."),
-        ("Kata 'merupakan' dalam teks LHO umumnya berfungsi sebagai …", ["verba relasional", "kata seru", "kata ganti", "konjungsi temporal"], 0, "'Merupakan' menghubungkan objek dengan definisi atau klasifikasinya."),
-        ("Pernyataan yang paling objektif adalah …", ["Bunga itu paling indah di dunia.", "Menurut saya, pohon itu membosankan.", "Daun mangga berbentuk memanjang dengan ujung meruncing.", "Semua orang pasti menyukai kucing."], 2, "Pernyataan tersebut mendeskripsikan ciri yang dapat diamati."),
-        ("Langkah awal menyusun teks LHO adalah …", ["memublikasikan laporan", "menentukan objek pengamatan", "menulis kesimpulan", "mengoreksi ejaan"], 1, "Penulis perlu menentukan objek sebelum melakukan pengamatan."),
-        ("Deskripsi bagian berisi …", ["rincian ciri atau bagian objek", "daftar pustaka saja", "pendapat pribadi penulis", "judul laporan saja"], 0, "Deskripsi bagian menguraikan karakteristik objek secara rinci."),
-        ("Kosakata khusus seperti 'habitat' disebut …", ["istilah teknis", "kata seru", "kata sandang", "majas"], 0, "Istilah teknis digunakan dalam bidang atau topik tertentu."),
-        ("Catatan pengamatan yang baik seharusnya …", ["mengandung dugaan tanpa bukti", "berisi fakta yang relevan dan rinci", "mengutamakan humor", "menghilangkan data penting"], 1, "Catatan perlu akurat, relevan, dan cukup rinci untuk mendukung laporan."),
-        ("Kalimat yang menggunakan istilah teknis sesuai topik lingkungan adalah …", ["Sungai itu sangat menyenangkan.", "Ekosistem sungai terdiri atas komponen biotik dan abiotik.", "Saya suka melihat air.", "Pemandangan itu paling bagus."], 1, "Istilah ekosistem, biotik, dan abiotik merupakan kosakata khusus bidang lingkungan."),
-        ("Setelah data observasi dikelompokkan, langkah yang tepat berikutnya adalah …", ["Menghapus data yang tidak sesuai pendapat", "Menyusun kerangka berdasarkan struktur LHO", "Menambahkan cerita khayalan", "Menentukan tokoh dan konflik"], 1, "Kerangka membantu menata data ke dalam pernyataan umum, deskripsi bagian, dan bagian akhir yang relevan.")
-    ]
-    with st.form("quiz_form"):
-        student = st.text_input("Nama siswa (opsional)")
-        answers=[]
-        for i,(q,opts,correct,why) in enumerate(questions):
-            st.markdown(f"**{i+1}. {q}**")
-            answers.append(st.radio("Pilih jawaban:", opts, key=f"q{i}", index=None, label_visibility="collapsed"))
-        submitted = st.form_submit_button("Periksa Jawaban", type="primary")
-    if submitted:
-        if any(x is None for x in answers):
-            st.error("Jawab semua pertanyaan terlebih dahulu.")
-        else:
-            score=sum(1 for ans,(_,opts,correct,_) in zip(answers,questions) if ans==opts[correct])
-            st.success(f"{student or 'Siswa'}, skor kamu: {score}/{len(questions)} ({round(score/len(questions)*100)}%).")
-            for i,(q,opts,correct,why) in enumerate(questions):
-                is_correct=answers[i]==opts[correct]
-                st.write(("✅ Benar. " if is_correct else f"❌ Jawaban benar: **{opts[correct]}**. ")+why)
-
-elif page == "Kumpulkan Tugas":
-    st.title("Pengumpulan Tugas Siswa")
-    st.write("Isi identitas, pilih tugas, lalu unggah dokumen. Format yang diterima: DOCX, PDF, atau gambar.")
-    with st.form("submission_form", clear_on_submit=True):
-        name=st.text_input("Nama lengkap", max_chars=100)
-        class_name=st.selectbox("Kelas", ["X-A", "X-B", "Kelas lain / belum ditentukan"])
-        task=st.selectbox("Jenis tugas", ["LKPD Analisis Teks LHO", "Menulis Teks LHO", "Analisis Struktur dan Kaidah Kebahasaan", "Tugas lainnya"])
-        note=st.text_area("Catatan untuk guru (opsional)")
-        uploaded=st.file_uploader("Pilih file tugas", type=["docx","pdf","png","jpg","jpeg"])
-        ok=st.form_submit_button("Kirim Tugas", type="primary")
-    if ok:
-        if not name.strip() or uploaded is None:
-            st.error("Nama lengkap dan file tugas wajib diisi.")
-        else:
-            safe_name="".join(ch for ch in name.strip() if ch.isalnum() or ch in "-_ ").strip().replace(" ","_")[:60] or "siswa"
-            stamp=datetime.now().strftime("%Y%m%d_%H%M%S")
-            saved=UPLOAD_DIR / f"{stamp}_{safe_name}_{Path(uploaded.name).name}"
-            saved.write_bytes(uploaded.getbuffer())
-            with connect() as con:
-                con.execute("INSERT INTO submissions (student_name,class_name,task_title,note,file_name,saved_path,submitted_at) VALUES (?,?,?,?,?,?,?)", (name.strip(),class_name,task,note.strip(),uploaded.name,str(saved),datetime.now().strftime("%d-%m-%Y %H:%M:%S")))
-            st.success("Tugas berhasil disimpan. Simpan nama yang kamu gunakan agar mudah menanyakan umpan balik kepada guru.")
-
-elif page == "Ruang Guru":
-    st.title("Ruang Guru: Pemeriksaan Tugas")
-    st.write("Masukkan PIN guru untuk melihat kiriman, mengunduh file, dan menambahkan nilai serta umpan balik.")
-    pin_expected=os.getenv("RUANGLHO_TEACHER_PIN", "1234")
-    pin=st.text_input("PIN guru", type="password")
-    if pin == pin_expected:
-        st.success("Akses guru terbuka.")
-        with connect() as con:
-            rows=con.execute("SELECT * FROM submissions ORDER BY id DESC").fetchall()
-        if not rows:
-            st.info("Belum ada tugas yang dikumpulkan.")
-        else:
-            for row in rows:
-                label=f"{row['student_name']} — {row['task_title']} — {row['submitted_at']}"
-                with st.expander(label):
-                    st.write(f"**Kelas:** {row['class_name']}")
-                    st.write(f"**Catatan siswa:** {row['note'] or '-'}")
-                    fpath=Path(row['saved_path'])
-                    if fpath.exists():
-                        st.download_button("Unduh file tugas", data=fpath.read_bytes(), file_name=row['file_name'], key=f"download_{row['id']}")
-                    with st.form(f"review_{row['id']}"):
-                        score=st.number_input("Nilai (0–100)", min_value=0, max_value=100, value=int(row['score']) if row['score'] is not None else 0, step=1)
-                        feedback=st.text_area("Umpan balik guru", value=row['feedback'] or "")
-                        save=st.form_submit_button("Simpan umpan balik")
-                    if save:
-                        with connect() as con:
-                            con.execute("UPDATE submissions SET score=?, feedback=?, reviewed_at=? WHERE id=?", (int(score),feedback.strip(),datetime.now().strftime("%d-%m-%Y %H:%M:%S"),row['id']))
-                        st.success("Umpan balik tersimpan. Muat ulang halaman bila perlu.")
-        st.caption("PIN awal: 1234. Demi keamanan, ubah PIN dengan membuat variabel lingkungan RUANGLHO_TEACHER_PIN sebelum aplikasi dijalankan.")
-    elif pin:
-        st.error("PIN tidak sesuai.")
-
-elif page == "Tanya AI":
-    st.title("Tanya Jawab AI tentang Teks LHO")
-    st.write("Ajukan pertanyaan tentang materi LHO. Jawaban AI otomatis menggunakan Gemini jika guru telah mengatur GEMINI_API_KEY pada pengaturan aplikasi. Untuk uji coba lokal, kunci juga dapat dimasukkan sementara di bawah.")
-    question=st.text_area("Pertanyaanmu", placeholder="Contoh: Apa perbedaan pernyataan umum dan deskripsi bagian?")
-    configured_key = os.getenv("GEMINI_API_KEY", "")
+def ask_ai(history, prompt):
+    key = secret("GEMINI_API_KEY").strip()
+    if not key:
+        return None, "GEMINI_API_KEY belum diatur di Streamlit Cloud → Settings → Secrets."
+    # Model default dapat diganti lewat Secrets; tidak memakai Gemini 2.5 Flash.
+    model = secret("GEMINI_MODEL", "gemini-3.8-flash").strip().removeprefix("models/")
+    system = ("Kamu adalah Ruang AI, pendamping belajar Bahasa Indonesia untuk siswa SMA. "
+              "Bantu siswa memahami teks Laporan Hasil Observasi (LHO) dengan bahasa ramah dan jelas. "
+              "Berikan contoh orisinal, dorong siswa berpikir, dan jangan mengarang sumber.")
+    contents = []
+    for m in history[-10:]:
+        txt = m.get("content","").strip()
+        if txt:
+            contents.append({"role":"model" if m["role"]=="assistant" else "user","parts":[{"text":txt}]})
+    contents.append({"role":"user","parts":[{"text":prompt}]})
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     try:
-        configured_key = configured_key or st.secrets.get("GEMINI_API_KEY", "")
-    except Exception:
-        pass
-    api_key = configured_key or st.text_input("Gemini API key (opsional untuk uji coba lokal)", type="password", help="Kunci tidak disimpan oleh aplikasi. Jika aplikasi dipublikasikan, lebih aman atur melalui Secrets hosting.")
-    if st.button("Kirim pertanyaan", type="primary"):
-        if not question.strip():
-            st.error("Tuliskan pertanyaan terlebih dahulu.")
-        elif api_key.strip():
-            try:
-                import requests
-                url=f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key.strip()}"
-                payload={"system_instruction":{"parts":[{"text":"Kamu adalah tutor Bahasa Indonesia kelas X yang membantu siswa memahami teks Laporan Hasil Observasi (LHO). Jawab dalam bahasa Indonesia yang jelas, ramah, dan sesuai tingkat SMA. Berikan penjelasan yang akurat, contoh jika relevan, dan umpan balik pembelajaran yang membangun."}]},"contents":[{"parts":[{"text":question.strip()}]}],"generationConfig":{"temperature":0.5}}
-                resp=requests.post(url,json=payload,timeout=45)
-                if resp.ok:
-                    data=resp.json(); answer=data["candidates"][0]["content"]["parts"][0]["text"]
-                    st.session_state["last_ai_question"] = question.strip()
-                    st.session_state["last_ai_answer"] = answer
-                    st.session_state["last_ai_source"] = "gemini"
-                else:
-                    st.error(f"Layanan AI memberi respons {resp.status_code}. Periksa kunci API atau koneksi internet.")
-            except Exception:
-                st.error("Tidak dapat menghubungi layanan AI. Periksa koneksi internet dan kunci API.")
-        else:
-            q=question.lower()
-            if "struktur" in q:
-                ans="Struktur teks LHO umumnya meliputi pernyataan umum/klasifikasi, deskripsi bagian, dan deskripsi manfaat atau simpulan bila sesuai. Pernyataan umum mengenalkan objek; deskripsi bagian merinci cirinya; bagian akhir menjelaskan manfaat atau merangkum informasi relevan."
-            elif "objektif" in q or "fakta" in q or "opini" in q:
-                ans="Informasi objektif didasarkan pada fakta yang dapat diperiksa, bukan penilaian pribadi. Contoh fakta: 'Daun mangga berbentuk memanjang.' Contoh opini: 'Daun mangga sangat cantik.' Dalam teks LHO, utamakan hasil pengamatan yang bisa dibuktikan."
-            elif "kaidah" in q or "kebahasaan" in q:
-                ans="Kaidah kebahasaan LHO antara lain penggunaan nomina, verba relasional seperti 'adalah' dan 'merupakan', istilah teknis, kalimat definisi, kalimat deskripsi, dan kata baku."
-            elif "tujuan" in q or "pengertian" in q or "ciri" in q:
-                ans="Teks Laporan Hasil Observasi menyampaikan informasi faktual tentang objek berdasarkan pengamatan sistematis. Tujuannya agar pembaca memahami objek secara jelas dan objektif. Ciri umumnya: faktual, sistematis, informatif, dan menggunakan bahasa baku."
+        r = requests.post(url,headers={"Content-Type":"application/json","x-goog-api-key":key},
+          json={"systemInstruction":{"parts":[{"text":system}]},"contents":contents,
+                "generationConfig":{"temperature":0.6,"maxOutputTokens":1200}},timeout=45)
+        if r.status_code != 200:
+            try: detail = r.json().get("error",{}).get("message",r.text)
+            except Exception: detail = r.text
+            if r.status_code == 404:
+                return None, f"Model '{model}' tidak tersedia untuk API key ini (404). Periksa daftar model yang didukung key-mu atau ubah GEMINI_MODEL di Secrets. Detail: {detail}"
+            if r.status_code in (401,403):
+                return None, f"API key ditolak atau tidak punya izin ({r.status_code}). Periksa key Google AI Studio pada Secrets. Detail: {detail}"
+            if r.status_code == 429:
+                return None, f"Batas penggunaan API tercapai. Coba lagi nanti. Detail: {detail}"
+            return None, f"Permintaan AI gagal (HTTP {r.status_code}). Detail: {detail}"
+        data = r.json()
+        candidates = data.get("candidates",[])
+        if not candidates: return None, "AI tidak mengembalikan jawaban. Coba pertanyaan lain."
+        answer = "\n".join(p.get("text","") for p in candidates[0].get("content",{}).get("parts",[]) if p.get("text"))
+        return (answer,None) if answer else (None,"Respons AI kosong.")
+    except requests.Timeout:
+        return None,"Permintaan ke AI terlalu lama. Coba lagi."
+    except requests.RequestException as e:
+        return None,f"Tidak dapat menghubungi layanan AI: {e}"
+
+st.markdown("""<style>.main .block-container{max-width:1150px;padding-top:1.5rem}
+.hero{padding:1.5rem;border-radius:16px;background:linear-gradient(120deg,#153b65,#277e91);color:white}
+.hero h1{color:white}</style>""",unsafe_allow_html=True)
+
+for k,v in {"role":"","student_name":"","student_class":"","chat":[]}.items():
+    if k not in st.session_state: st.session_state[k]=v
+
+with st.sidebar:
+    st.markdown("## 📘 Ruang LHO")
+    st.caption("Media Pembelajaran Bahasa Indonesia")
+    if st.session_state.role:
+        st.success("Masuk sebagai "+("Guru" if st.session_state.role=="guru" else "Siswa"))
+        if st.session_state.role=="siswa": st.caption(st.session_state.student_name)
+        if st.button("Keluar",use_container_width=True):
+            for k in ["role","student_name","student_class","chat","page"]: st.session_state.pop(k,None)
+            st.rerun()
+    st.divider()
+
+if not st.session_state.role:
+    st.markdown(f'<div class="hero"><h1>📘 Ruang LHO</h1><p>Media Pembelajaran Teks Laporan Hasil Observasi</p><b>{SCHOOL} · {YEAR}</b></div>',unsafe_allow_html=True)
+    tab1,tab2=st.tabs(["👩‍🎓 Masuk Siswa","👩‍🏫 Masuk Guru"])
+    with tab1:
+        with st.form("login_siswa"):
+            nm=st.text_input("Nama lengkap siswa"); cl=st.text_input("Kelas")
+            ok=st.form_submit_button("Masuk sebagai Siswa")
+        if ok:
+            if not nm.strip(): st.warning("Nama lengkap perlu diisi.")
             else:
-                ans="Aku bisa membantu menjelaskan pengertian, tujuan, ciri, struktur, kaidah kebahasaan, fakta dan opini, serta langkah menyusun teks LHO. Untuk jawaban generatif yang menanggapi pertanyaan secara khusus, guru perlu mengatur Gemini API key pada aplikasi."
-            st.session_state["last_ai_question"] = question.strip()
-            st.session_state["last_ai_answer"] = ans
-            st.session_state["last_ai_source"] = "panduan"
-    if st.session_state.get("last_ai_answer"):
-        st.markdown("### Jawaban")
-        st.write(st.session_state["last_ai_answer"])
-        st.caption("Sumber jawaban: " + ("AI generatif Gemini" if st.session_state.get("last_ai_source") == "gemini" else "panduan materi lokal"))
-        st.markdown("**Apakah jawaban ini membantu?**")
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("👍 Membantu", key="ai_helpful"):
-                st.session_state["ai_feedback"] = "Membantu"
-        with c2:
-            if st.button("👎 Belum membantu", key="ai_not_helpful"):
-                st.session_state["ai_feedback"] = "Belum membantu"
-        if st.session_state.get("ai_feedback"):
-            st.success("Terima kasih atas umpan balikmu: " + st.session_state["ai_feedback"] + ".")
-            extra = st.text_area("Saran atau pertanyaan lanjutan (opsional)", key="ai_feedback_detail")
-            if st.button("Kirim umpan balik", key="send_ai_feedback"):
-                st.session_state["saved_ai_feedback"] = {"question": st.session_state.get("last_ai_question", ""), "rating": st.session_state["ai_feedback"], "detail": extra.strip(), "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")}
-                st.success("Umpan balik tersimpan untuk sesi ini. Terima kasih!")
+                st.session_state.role="siswa"; st.session_state.student_name=nm.strip()
+                st.session_state.student_class=cl.strip(); st.session_state.page="Beranda"; st.rerun()
+    with tab2:
+        with st.form("login_guru"):
+            pin=st.text_input("PIN guru",type="password"); okg=st.form_submit_button("Masuk sebagai Guru")
+        if okg:
+            if pin==secret("TEACHER_PIN","1234"):
+                st.session_state.role="guru"; st.session_state.page="Ruang Guru"; st.rerun()
+            else: st.error("PIN guru salah.")
+        st.caption("Ubah PIN default melalui TEACHER_PIN di Streamlit Secrets.")
+    st.stop()
 
+if st.session_state.role=="siswa":
+    menu=["Beranda","Komponen Inti (Identitas Modul)","Materi LHO","LKPD","Kuis","Kumpulkan Tugas","Umpan Balik Guru","Tanya AI"]
+else:
+    menu=["Beranda","Komponen Inti (Identitas Modul)","Materi LHO","LKPD","Kuis","Kumpulkan Tugas","Ruang Guru","Tanya AI"]
+with st.sidebar: st.radio("Menu",menu,key="page")
+page=st.session_state.page
 
+if page=="Beranda":
+    st.markdown(f'<div class="hero"><h1>📘 Ruang LHO</h1><p>Media Pembelajaran Teks Laporan Hasil Observasi</p><b>{SCHOOL} · Tahun Ajaran {YEAR}</b></div>',unsafe_allow_html=True)
+    st.write("Pelajari konsep LHO, analisis contoh, susun laporan dari pengamatan nyata, lalu sajikan temuan secara runtut.")
+    a,b,c=st.columns(3); a.metric("Topik materi","8"); b.metric("Latihan","LKPD + Kuis"); c.metric("Tahun ajaran",YEAR)
+    st.subheader("Alur belajar")
+    st.markdown("1. Pelajari delapan topik materi.\n2. Kerjakan LKPD dan kuis.\n3. Kumpulkan tugas.\n4. Periksa komentar guru pada menu Umpan Balik Guru.")
+    st.subheader("Video pendukung"); st.link_button("▶ Cari video pembelajaran teks LHO di YouTube",VIDEO_URL)
+    with st.expander("Tim penyusun"):
+        for x in AUTHORS: st.write("• "+x)
+
+elif page=="Komponen Inti (Identitas Modul)":
+    st.title("Komponen Inti (Identitas Modul)")
+    st.subheader("A. Identitas Modul")
+    for k,v in [("Satuan pendidikan",SCHOOL),("Mata pelajaran","Bahasa Indonesia"),("Materi pokok","Teks Laporan Hasil Observasi"),("Fase/Kelas","Fase E / Kelas X (sesuaikan dengan sasaran sekolah)"),("Tahun ajaran",YEAR),("Alokasi waktu","Disesuaikan dengan jadwal guru"),("Penyusun",", ".join(AUTHORS))]:
+        st.markdown(f"**{k}:** {v}")
+    st.subheader("B. Capaian Pembelajaran (ringkasan kerja)"); st.write(CP_TEXT)
+    st.warning("Ini ringkasan kerja, bukan kutipan verbatim CP resmi. Guru perlu mencocokkan dengan dokumen CP yang berlaku di sekolah.")
+    st.markdown("[Rujukan CP Bahasa Indonesia Fase E](https://guru.kemendikdasmen.go.id/kurikulum/referensi-penerapan/capaian-pembelajaran/sd-sma/bahasa-indonesia/fase-e/)")
+    st.subheader("C. Tujuan Pembelajaran")
+    for x in ["Menjelaskan pengertian dan tujuan teks LHO.","Mengidentifikasi ciri-ciri dan struktur teks LHO.","Menganalisis kaidah kebahasaan teks LHO.","Menemukan informasi faktual dalam contoh teks LHO.","Menyusun dan menyunting teks LHO berdasarkan observasi nyata.","Menyajikan hasil observasi secara runtut."]: st.write("• "+x)
+    st.subheader("D. Alur Tujuan Pembelajaran (ATP)")
+    for i,x in enumerate(ATP,1): st.write(f"{i}. {x}")
+    st.subheader("E. Asesmen"); st.write("Asesmen awal melalui tanya jawab; formatif melalui analisis contoh dan LKPD; asesmen akhir melalui teks LHO dan presentasi. Kriteria meliputi ketepatan fakta, struktur, bahasa, keruntutan, dan penyajian.")
+
+elif page=="Materi LHO":
+    st.title("Materi Teks Laporan Hasil Observasi")
+    for i,t in enumerate(TOPICS,1):
+        with st.expander(f"{i}. {t}",expanded=(i==1)): st.markdown(MATERIALS[t])
+    st.subheader("Video pendukung"); st.link_button("▶ Cari video pembelajaran di YouTube",VIDEO_URL)
+
+elif page=="LKPD":
+    st.title("LKPD — Lembar Kerja Peserta Didik")
+    st.markdown("""**Kegiatan: Mengamati objek di lingkungan sekolah**
+1. Pilih objek yang aman dan bisa diamati.
+2. Tuliskan tujuan pengamatan.
+3. Catat sekurang-kurangnya lima fakta yang ditemukan.
+4. Kelompokkan catatan menjadi pernyataan umum dan deskripsi bagian.
+5. Susun teks LHO dengan bahasa baku.
+6. Tandai kata benda, kata kerja relasional, dan istilah khusus.
+7. Buat simpulan berdasarkan data.""")
+    st.subheader("Daftar periksa")
+    for i,x in enumerate(["Objek dan tujuan jelas","Fakta berasal dari pengamatan","Struktur runtut","Bahasa baku","Ejaan dan tanda baca diperiksa"]): st.checkbox(x,key=f"lkpd_{i}")
+
+elif page=="Kuis":
+    st.title("Kuis Teks Laporan Hasil Observasi")
+    qs=[
+    ("Teks LHO terutama berdasarkan …",["Imajinasi","Fakta hasil pengamatan","Konflik tokoh","Pendapat tanpa bukti"],1),
+    ("Bagian yang mengenalkan objek secara umum disebut …",["Orientasi","Komplikasi","Pernyataan umum/klasifikasi","Resolusi"],2),
+    ("Sikap yang perlu dijaga dalam LHO adalah …",["Objektif","Berlebihan","Memihak","Penuh dugaan"],0),
+    ("Kata “merupakan” termasuk …",["Kata seru","Kata kerja relasional","Kata ganti","Kata sandang"],1),
+    ("Langkah awal menyusun LHO adalah …",["Presentasi","Menentukan objek","Menyunting","Mencetak"],1)]
+    with st.form("quiz_form"):
+        answers=[st.radio(f"{i}. {q}",opts,index=None,key=f"q_{i}") for i,(q,opts,correct) in enumerate(qs,1)]
+        submitted=st.form_submit_button("Periksa Jawaban")
+    if submitted:
+        if any(x is None for x in answers): st.warning("Jawab semua soal terlebih dahulu.")
+        else:
+            score=sum(x==q[1][q[2]] for x,q in zip(answers,qs))
+            st.success(f"Nilai: {score}/{len(qs)} ({round(score/len(qs)*100)}%)")
+            with db() as c:
+                c.execute("INSERT INTO quizzes(name,score,total,submitted) VALUES(?,?,?,?)",(st.session_state.student_name or "Guru",score,len(qs),datetime.now().strftime("%Y-%m-%d %H:%M"))); c.commit()
+            with st.expander("Pembahasan"):
+                for i,(q,opts,correct) in enumerate(qs,1): st.write(f"{i}. Jawaban: **{opts[correct]}**")
+
+elif page=="Kumpulkan Tugas":
+    st.title("Kumpulkan Tugas")
+    with st.form("task_form",clear_on_submit=True):
+        name=st.text_input("Nama siswa",value=st.session_state.student_name if st.session_state.role=="siswa" else "")
+        klass=st.text_input("Kelas",value=st.session_state.student_class if st.session_state.role=="siswa" else "")
+        title=st.selectbox("Jenis tugas",["LKPD: Observasi objek","Menulis teks LHO","Analisis struktur dan kaidah kebahasaan","Presentasi hasil observasi"])
+        answer=st.text_area("Jawaban/catatan untuk guru",height=160)
+        upload=st.file_uploader("Unggah berkas (opsional)",type=["pdf","doc","docx","txt","jpg","jpeg","png","ppt","pptx"])
+        send=st.form_submit_button("Kirim Tugas")
+    if send:
+        if not name.strip(): st.error("Nama siswa wajib diisi.")
+        elif not answer.strip() and upload is None: st.error("Isi jawaban atau unggah berkas.")
+        else:
+            submit_task(name,klass,title,answer,upload)
+            st.success("Tugas tercatat. Periksa menu Umpan Balik Guru setelah guru menilainya.")
+
+elif page=="Umpan Balik Guru":
+    st.title("Umpan Balik Guru"); st.write(f"Umpan balik untuk **{st.session_state.student_name}**")
+    rows=task_rows(st.session_state.student_name)
+    if not rows: st.info("Belum ada tugas atas nama ini. Pastikan nama saat mengumpulkan sama dengan nama login.")
+    for r in rows:
+        with st.expander(f"{r['title']} · {r['submitted']}"):
+            st.write("**Jawaban:**"); st.write(r["answer"] or "Tidak ada jawaban tertulis.")
+            if r["file_name"]: st.write("Berkas:",r["file_name"])
+            st.write("**Nilai:**",r["score"] or "Belum dinilai")
+            st.write("**Komentar guru:**",r["feedback"] or "Belum ada umpan balik")
+            if r["reviewed"]: st.caption("Diperiksa: "+r["reviewed"])
+
+elif page=="Ruang Guru":
+    if st.session_state.role!="guru": st.error("Menu ini hanya untuk guru."); st.stop()
+    st.title("Ruang Guru — Pemeriksaan Tugas"); rows=task_rows(); st.metric("Tugas masuk",len(rows))
+    if not rows: st.info("Belum ada tugas masuk.")
+    for r in rows:
+        with st.expander(f"{r['name']} ({r['class_name'] or 'kelas belum diisi'}) · {r['title']} · {r['submitted']}"):
+            st.write("**Jawaban siswa:**"); st.write(r["answer"] or "Tidak ada jawaban tertulis.")
+            if r["file_name"]:
+                p=UPLOADS/r["stored_file"]
+                if p.exists(): st.download_button("Unduh berkas",p.read_bytes(),file_name=r["file_name"],key=f"dl_{r['id']}")
+                else: st.warning("Berkas tidak tersedia pada penyimpanan lokal.")
+            with st.form(f"review_{r['id']}"):
+                score=st.text_input("Nilai",value=r["score"] or "")
+                feedback=st.text_area("Komentar/umpan balik",value=r["feedback"] or "",height=120)
+                save=st.form_submit_button("Simpan Umpan Balik")
+            if save:
+                save_review(r["id"],score,feedback); st.success("Umpan balik tersimpan."); st.rerun()
+    st.subheader("Hasil kuis")
+    with db() as c: qr=c.execute("SELECT * FROM quizzes ORDER BY id DESC").fetchall()
+    if qr: st.dataframe([{"Nama":r["name"],"Skor":f"{r['score']}/{r['total']}","Waktu":r["submitted"]} for r in qr],use_container_width=True,hide_index=True)
+    else: st.info("Belum ada hasil kuis.")
+
+elif page=="Tanya AI":
+    st.title("Tanya AI — Teman Belajar Teks LHO")
+    st.caption("Model bawaan: Gemini 3.8 Flash. Model dapat diubah melalui GEMINI_MODEL pada Streamlit Secrets.")
+    if st.button("Hapus riwayat percakapan"): st.session_state.chat=[]; st.rerun()
+    for m in st.session_state.chat:
+        with st.chat_message(m["role"]): st.markdown(m["content"])
+    prompt=st.chat_input("Tulis pertanyaan tentang teks LHO…")
+    if prompt:
+        with st.chat_message("user"): st.markdown(prompt)
+        with st.chat_message("assistant"):
+            with st.spinner("Ruang AI sedang menjawab…"):
+                answer,error=ask_ai(st.session_state.chat,prompt)
+                if error: st.error(error)
+                else:
+                    st.markdown(answer)
+                    st.session_state.chat.extend([{"role":"user","content":prompt},{"role":"assistant","content":answer}])
+
+st.divider()
+st.caption(f"Ruang LHO · {SCHOOL} · Tahun Ajaran {YEAR}")
