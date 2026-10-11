@@ -23,8 +23,6 @@ TOPICS = [
     "Langkah-langkah Menyusun Teks Laporan Hasil Observasi",
     "Penyajian dan Presentasi Hasil Observasi",
 ]
-VIDEO_URL = "https://www.youtube.com/results?search_query=teks+laporan+hasil+observasi+kelas+X+struktur+kaidah+kebahasaan"
-
 MATERIALS = {
 TOPICS[0]: """Teks Laporan Hasil Observasi (LHO) menyampaikan informasi tentang suatu objek berdasarkan pengamatan yang sistematis. Objek dapat berupa makhluk hidup, benda, tempat, lingkungan, atau fenomena. Informasinya harus berdasarkan fakta, bukan imajinasi atau pendapat pribadi.""",
 TOPICS[1]: """Tujuan teks LHO adalah memberikan informasi faktual dan objektif tentang objek atau fenomena. Laporan membantu pembaca mengenali, memahami, dan mengelompokkan objek berdasarkan ciri-cirinya. Kegiatan ini juga melatih keterampilan mengamati, mencatat data, dan menyampaikan temuan dengan jelas.""",
@@ -45,10 +43,9 @@ Deskripsi manfaat: Lidah buaya dimanfaatkan dalam produk perawatan dan sebagai t
 TOPICS[6]: """Langkah menyusun teks LHO: 1) menentukan objek yang aman untuk diamati; 2) menentukan tujuan dan aspek pengamatan; 3) mengamati dengan teliti; 4) mencatat fakta; 5) mengelompokkan data; 6) membuat kerangka; 7) mengembangkan kerangka menjadi paragraf; 8) memeriksa fakta, ejaan, tanda baca, dan pilihan kata; 9) merevisi berdasarkan masukan.""",
 TOPICS[7]: """Hasil observasi dapat disajikan sebagai laporan tertulis, poster, infografik, atau presentasi lisan. Saat presentasi, sampaikan objek dan tujuan, cara pengamatan, temuan utama, lalu simpulan. Gunakan foto, tabel, atau diagram bila membantu. Jawab pertanyaan berdasarkan data dan bedakan fakta dari dugaan."""
 }
-CP_TEXT = ("Ringkasan kerja: peserta didik memahami, mengolah, dan menyampaikan informasi dari berbagai jenis teks; "
+CP_TEXT = (" peserta didik memahami, mengolah, dan menyampaikan informasi dari berbagai jenis teks; "
            "menggunakan Bahasa Indonesia secara logis, kritis, dan kreatif; serta menyajikan gagasan dan hasil pengamatan "
-           "secara runtut sesuai konteks. Ini bukan kutipan verbatim CP resmi—guru perlu mencocokkannya dengan dokumen CP "
-           "Bahasa Indonesia Fase E yang berlaku.")
+           "secara runtut sesuai konteks.")
 ATP = [
 "Menjelaskan pengertian dan tujuan teks LHO berdasarkan contoh.",
 "Mengidentifikasi ciri-ciri dan struktur teks LHO.",
@@ -62,8 +59,10 @@ ATP = [
 ROOT = Path(__file__).parent
 DATA = ROOT / "data"
 UPLOADS = DATA / "tugas"
+LKPD_DIR = ROOT / "lkpd_files"  # Tambahan: lokasi lembar jawaban Word LKPD
 DATA.mkdir(exist_ok=True)
 UPLOADS.mkdir(exist_ok=True)
+LKPD_DIR.mkdir(exist_ok=True)
 DB = DATA / "ruang_lho.db"
 
 def secret(name, default=""):
@@ -230,16 +229,87 @@ elif page=="Materi LHO":
 
 elif page=="LKPD":
     st.title("LKPD — Lembar Kerja Peserta Didik")
-    st.markdown("""**Kegiatan: Mengamati objek di lingkungan sekolah**
-1. Pilih objek yang aman dan bisa diamati.
-2. Tuliskan tujuan pengamatan.
-3. Catat sekurang-kurangnya lima fakta yang ditemukan.
-4. Kelompokkan catatan menjadi pernyataan umum dan deskripsi bagian.
-5. Susun teks LHO dengan bahasa baku.
-6. Tandai kata benda, kata kerja relasional, dan istilah khusus.
-7. Buat simpulan berdasarkan data.""")
-    st.subheader("Daftar periksa")
-    for i,x in enumerate(["Objek dan tujuan jelas","Fakta berasal dari pengamatan","Struktur runtut","Bahasa baku","Ejaan dan tanda baca diperiksa"]): st.checkbox(x,key=f"lkpd_{i}")
+    st.write("Pilih salah satu LKPD. Baca petunjuk dan soal di halaman ini, lalu unduh lembar jawaban Word. Setelah selesai, unggah dokumen melalui menu **Kumpulkan Tugas**.")
+
+    lkpd_options = {
+        "LKPD 1 — Observasi Objek": {
+            "file": "LKPD_1_Observasi_Objek.docx",
+            "objective": "Mengidentifikasi objek dan mengumpulkan fakta berdasarkan pengamatan langsung.",
+            "instructions": [
+                "Pilih satu objek yang aman untuk diamati di lingkungan sekolah atau rumah.",
+                "Amati objek dengan teliti dan catat fakta yang benar-benar terlihat.",
+                "Isi semua bagian berdasarkan hasil pengamatan, bukan dugaan."
+            ],
+            "questions": [
+                "Tuliskan objek yang kamu amati dan tujuan pengamatan.",
+                "Catat sekurang-kurangnya lima fakta yang kamu temukan.",
+                "Kelompokkan temuan menjadi pernyataan umum dan deskripsi bagian.",
+                "Tuliskan simpulan berdasarkan fakta hasil pengamatan."
+            ],
+            "task": "LKPD 1 — Observasi Objek"
+        },
+        "LKPD 2 — Menulis Teks LHO": {
+            "file": "LKPD_2_Menulis_Teks_LHO.docx",
+            "objective": "Menyusun teks LHO yang faktual, objektif, sistematis, dan menggunakan bahasa baku.",
+            "instructions": [
+                "Gunakan fakta dari hasil pengamatan nyata, termasuk catatan LKPD 1 jika relevan.",
+                "Buat kerangka berdasarkan struktur teks LHO.",
+                "Kembangkan kerangka menjadi laporan yang runtut dan periksa kembali ejaan."
+            ],
+            "questions": [
+                "Tuliskan objek yang dilaporkan, tujuan, dan fakta utama.",
+                "Buat kerangka pernyataan umum/klasifikasi.",
+                "Kembangkan deskripsi bagian berdasarkan fakta pengamatan.",
+                "Tambahkan deskripsi manfaat atau simpulan jika diperlukan.",
+                "Tuliskan teks LHO lengkap dengan bahasa baku dan runtut."
+            ],
+            "task": "LKPD 2 — Menulis Teks LHO"
+        },
+        "LKPD 3 — Analisis Struktur dan Kaidah Kebahasaan": {
+            "file": "LKPD_3_Analisis_Struktur_Kaidah.docx",
+            "objective": "Menganalisis struktur dan unsur kebahasaan dalam contoh teks LHO.",
+            "instructions": [
+                "Bacalah teks contoh berikut dengan saksama.",
+                "Jawab pertanyaan menggunakan bukti berupa kata atau kalimat dari teks.",
+                "Gunakan istilah kebahasaan yang tepat dan jelaskan alasanmu."
+            ],
+            "sample": "Tanaman Lidah Buaya. Lidah buaya merupakan tanaman sukulen yang dapat menyimpan air pada daunnya dan dapat ditanam di pekarangan. Daunnya tebal, memanjang, berwarna hijau, dan memiliki tepi bergerigi. Bagian dalam daun mengandung gel. Tanaman membutuhkan cahaya matahari dan air untuk tumbuh. Lidah buaya dimanfaatkan dalam produk perawatan dan sebagai tanaman hias.",
+            "questions": [
+                "Tentukan bagian pernyataan umum/klasifikasi dalam teks dan jelaskan alasanmu.",
+                "Tentukan bagian deskripsi bagian dalam teks.",
+                "Tuliskan bagian deskripsi manfaat/simpulan jika ada.",
+                "Temukan contoh kata benda, kata kerja relasional, kata kerja material, kata sifat, dan istilah khusus.",
+                "Tuliskan dua fakta dari teks dan jelaskan mengapa teks tersebut termasuk LHO."
+            ],
+            "task": "LKPD 3 — Analisis Struktur dan Kaidah Kebahasaan"
+        }
+    }
+
+    selected_lkpd = st.selectbox("Pilih jenis LKPD", list(lkpd_options.keys()))
+    lkpd = lkpd_options[selected_lkpd]
+    st.subheader("Tujuan")
+    st.write(lkpd["objective"])
+    st.subheader("Petunjuk Pengerjaan")
+    for i, instruction in enumerate(lkpd["instructions"], 1):
+        st.write(f"{i}. {instruction}")
+    if lkpd.get("sample"):
+        st.subheader("Teks Contoh")
+        st.write(lkpd["sample"])
+    st.subheader("Soal / Tugas")
+    for i, question in enumerate(lkpd["questions"], 1):
+        st.write(f"{i}. {question}")
+    answer_path = LKPD_DIR / lkpd["file"]
+    if answer_path.exists():
+        st.download_button(
+            "⬇️ Unduh Lembar Jawaban Word (.docx)",
+            data=answer_path.read_bytes(),
+            file_name=lkpd["file"],
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key=f"download_{lkpd['file']}"
+        )
+    else:
+        st.error(f"File lembar jawaban tidak ditemukan: {lkpd['file']}. Pastikan folder lkpd_files berada di samping app.py.")
+    st.info("Setelah selesai mengisi dokumen Word, buka menu **Kumpulkan Tugas**, pilih jenis LKPD yang sama, lalu unggah dokumen jawabanmu.")
 
 elif page=="Kuis":
     st.title("Kuis Teks Laporan Hasil Observasi")
@@ -248,7 +318,12 @@ elif page=="Kuis":
     ("Bagian yang mengenalkan objek secara umum disebut …",["Orientasi","Komplikasi","Pernyataan umum/klasifikasi","Resolusi"],2),
     ("Sikap yang perlu dijaga dalam LHO adalah …",["Objektif","Berlebihan","Memihak","Penuh dugaan"],0),
     ("Kata “merupakan” termasuk …",["Kata seru","Kata kerja relasional","Kata ganti","Kata sandang"],1),
-    ("Langkah awal menyusun LHO adalah …",["Presentasi","Menentukan objek","Menyunting","Mencetak"],1)]
+    ("Langkah awal menyusun LHO adalah …",["Presentasi","Menentukan objek","Menyunting","Mencetak"],1),
+    ("Bagian teks LHO yang menjelaskan ciri atau bagian objek disebut …",["Deskripsi bagian","Orientasi","Komplikasi","Resolusi"],0),
+    ("Informasi dalam teks LHO sebaiknya bersifat …",["Rekaan","Objektif dan faktual","Rahasia","Persuasif semata"],1),
+    ("Kata “tumbuh” pada laporan tanaman termasuk …",["Kata kerja material","Kata seru","Kata ganti","Kata sandang"],0),
+    ("Manakah contoh fakta yang dapat diamati?",["Tanaman itu paling indah","Daunnya berwarna hijau","Semua orang menyukainya","Tanaman itu pasti ajaib"],1),
+    ("Sebelum menulis teks LHO, pengamat sebaiknya …",["Mengarang hasil","Menentukan objek dan mencatat data","Menyalin pendapat teman","Membuat simpulan tanpa data"],1)]
     with st.form("quiz_form"):
         answers=[st.radio(f"{i}. {q}",opts,index=None,key=f"q_{i}") for i,(q,opts,correct) in enumerate(qs,1)]
         submitted=st.form_submit_button("Periksa Jawaban")
@@ -267,7 +342,7 @@ elif page=="Kumpulkan Tugas":
     with st.form("task_form",clear_on_submit=True):
         name=st.text_input("Nama siswa",value=st.session_state.student_name if st.session_state.role=="siswa" else "")
         klass=st.text_input("Kelas",value=st.session_state.student_class if st.session_state.role=="siswa" else "")
-        title=st.selectbox("Jenis tugas",["LKPD: Observasi objek","Menulis teks LHO","Analisis struktur dan kaidah kebahasaan","Presentasi hasil observasi"])
+        title=st.selectbox("Jenis tugas",["LKPD 1 — Observasi Objek","LKPD 2 — Menulis Teks LHO","LKPD 3 — Analisis Struktur dan Kaidah Kebahasaan","LKPD: Observasi objek","Menulis teks LHO","Analisis struktur dan kaidah kebahasaan","Presentasi hasil observasi"])
         answer=st.text_area("Jawaban/catatan untuk guru",height=160)
         upload=st.file_uploader("Unggah berkas (opsional)",type=["pdf","doc","docx","txt","jpg","jpeg","png","ppt","pptx"])
         send=st.form_submit_button("Kirim Tugas")
