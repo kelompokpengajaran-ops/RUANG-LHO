@@ -23,6 +23,8 @@ TOPICS = [
     "Langkah-langkah Menyusun Teks Laporan Hasil Observasi",
     "Penyajian dan Presentasi Hasil Observasi",
 ]
+VIDEO_URL = "https://www.youtube.com/results?search_query=teks+laporan+hasil+observasi+kelas+X+struktur+kaidah+kebahasaan"
+
 MATERIALS = {
 TOPICS[0]: """Teks Laporan Hasil Observasi (LHO) menyampaikan informasi tentang suatu objek berdasarkan pengamatan yang sistematis. Objek dapat berupa makhluk hidup, benda, tempat, lingkungan, atau fenomena. Informasinya harus berdasarkan fakta, bukan imajinasi atau pendapat pribadi.""",
 TOPICS[1]: """Tujuan teks LHO adalah memberikan informasi faktual dan objektif tentang objek atau fenomena. Laporan membantu pembaca mengenali, memahami, dan mengelompokkan objek berdasarkan ciri-cirinya. Kegiatan ini juga melatih keterampilan mengamati, mencatat data, dan menyampaikan temuan dengan jelas.""",
